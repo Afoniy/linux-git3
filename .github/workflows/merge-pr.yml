@@ -1,0 +1,45 @@
+name: Auto Merge Verified PR
+
+on:
+  workflow_run:
+    workflows: ["Verify Contributor PR"] 
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  merge-approved-pr:
+    runs-on: ubuntu-latest
+    # Only execute if the previous verification workflow completely succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      # Download the artifact containing the PR number
+      - name: Download PR Context Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-context
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      # Read the PR number from the text file
+      - name: Read PR Number
+        id: get-pr
+        run: |
+          PR_NUM=$(cat pr_number.txt)
+          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+
+      # Automatically accept and merge the PR using GitHub CLI
+      - name: Approve and Merge PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.get-pr.outputs.pr_number }}
+        run: |
+          # Review/Approve the PR
+          gh pr review "$PR_NUMBER" --approve -m "Automated verification successful."
+          
+          # Merge the PR 
+          gh pr merge "$PR_NUMBER" --delete-branch
