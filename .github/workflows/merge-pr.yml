@@ -39,7 +39,7 @@ jobs:
           PR_NUMBER: ${{ steps.get-pr.outputs.pr_number }}
         run: |
           # Review/Approve the PR
-          gh pr review "$PR_NUMBER" --approve --comment -b "Automated verification successful."
+          gh pr review "$PR_NUMBER" --approve
           
           # Merge the PR 
           gh pr merge "$PR_NUMBER" --delete-branch
