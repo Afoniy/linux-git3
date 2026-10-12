@@ -42,4 +42,4 @@ jobs:
           gh pr review "$PR_NUMBER" --approve
           
           # Merge the PR 
-          gh pr merge "$PR_NUMBER" --delete-branch
+          gh pr merge "$PR_NUMBER" --merge --delete-branch
