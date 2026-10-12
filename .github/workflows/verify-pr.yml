@@ -1,0 +1,82 @@
+name: Verify Contributor PR
+
+on:
+  pull_request:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Code
+        uses: actions/checkout@v4 
+        with:
+         ref: ${{github.event.pull_request.head.ref}}
+         repository: ${{github.event.pull_request.head.repo.full_name}}
+         fetch-depth: 0
+      - name: check branch
+        id: checkbranch
+        continue-on-error: false
+        run: |
+          echo Github nick ${{ github.event.pull_request.user.login }}
+          echo Branch ${{ github.event.pull_request.head.ref }}
+          if [ "${{ github.event.pull_request.head.ref }}" != "${{ github.event.pull_request.user.login }}" ]
+          then
+            echo "Branch name is not the same as github nick"
+            exit 1
+          fi
+      - name: check title
+        id: checktitle
+        continue-on-error: false
+        run: |
+          echo Title ${{ github.event.pull_request.title }}
+          if [ "${{ github.event.pull_request.title }}" != "hw git2 ${{ github.event.pull_request.user.login }}" ]
+          then
+            echo "PR title is not hw git2 your_github_nick"
+            exit 1
+          fi
+      - name: check number of commits
+        id: checkcommits
+        continue-on-error: false
+        run: |
+          echo Commits ${{ github.event.pull_request.commits }}
+          if [ "${{ github.event.pull_request.commits }}" -ne 1 ]
+          then
+            echo "Number of commits in this PR is not 1"
+            exit 1
+          fi
+      - name: check number of changed files
+        id: checkchangedfiles
+        continue-on-error: false
+        run: |
+          echo Changed files ${{ github.event.pull_request.changed_files }}
+          if [ "${{ github.event.pull_request.changed_files }}" -ne 1 ]
+          then
+            echo "Number of changed files in this PR is not 1"
+            exit 1
+          fi
+      - name: run programm
+        id: runprog
+        continue-on-error: false
+        run: |
+          echo Running ./${{ github.event.pull_request.user.login }}.sh
+          out=$(./${{ github.event.pull_request.user.login }}.sh)
+          if [ $? -ne 0 ]; then 
+           echo Could not run ./"${{ github.event.pull_request.user.login }}.sh"
+           exit 1
+          fi
+          echo Output:${out}
+          if [ "$out" != "Hello pull-request" ]; then
+           echo Incorrect output $out
+           exit 1
+          fi         
+      # If the script succeeds, we save the PR number as a file artifact
+      - name: Save PR context for the merger
+        if: success()
+        run: echo "${{ github.event.pull_request.number }}" > pr_number.txt
+
+      - name: Upload PR Context Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-context
+          path: pr_number.txt
